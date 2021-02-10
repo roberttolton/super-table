@@ -265,7 +265,7 @@ if (typeof Craft.SuperTable === typeof undefined) {
             if (!isStatic) {
                 html += '<div class="superTable-layout-row-new-actions tfoot-actions">' +
                     '<div class="floating reorder"><a class="move icon" title="' + Craft.t('super-table', 'Reorder') + '"></a></div>' +
-                    '<div class="floating delete"><a class="delete icon" title="' + Craft.t('super-table', 'Delete') + '"></a></div>' + 
+                    '<div class="floating delete"><a class="delete icon" title="' + Craft.t('super-table', 'Delete') + '"></a></div>' +
                 '</div>';
             }
 
@@ -416,6 +416,8 @@ if (typeof Craft.SuperTable === typeof undefined) {
                 var $block = $(this.$rows[i]),
                     id = $block.data('id');
 
+                $block.data('row', row);
+
                 // Is this a new block?
                 var newMatch = (typeof id == 'string' && id.match(/new(\d+)/));
 
@@ -439,6 +441,7 @@ if (typeof Craft.SuperTable === typeof undefined) {
 
         addRow: function() {
             var type = this.blockType.type;
+            var isStatic = this.settings.staticField;
 
             this.totalNewBlocks++;
 
@@ -447,10 +450,12 @@ if (typeof Craft.SuperTable === typeof undefined) {
             var bodyHtml = this.getParsedBlockHtml(this.blockType.bodyHtml, id),
                 footHtml = this.getParsedBlockHtml(this.blockType.footHtml, id);
 
-            var html = '<div class="superTableMatrix matrixblock" data-id="{{ blockId }}"{% if block.collapsed %} data-collapsed{% endif %}>' +
+            var html = '<div class="superTableMatrix matrixblock ' + (isStatic ? 'static' : '') + '" data-id="' + id + '">' +
                 '<input type="hidden" name="' + this.inputNamePrefix + '[sortOrder][]" value="' + id + '">' +
-                '<input type="hidden" name="' + this.inputNamePrefix + '[blocks][' + id + '][type]" value="' + type + '">' +
-                '<div class="titlebar">' +
+                '<input type="hidden" name="' + this.inputNamePrefix + '[blocks][' + id + '][type]" value="' + type + '">';
+
+            if (!isStatic) {
+                html += '<div class="titlebar">' +
                 '<div class="blocktype"></div>' +
                 '<div class="preview"></div>' +
                 '</div>' +
@@ -467,9 +472,11 @@ if (typeof Craft.SuperTable === typeof undefined) {
                 '</ul>' +
                 '</div>' +
                 '<a class="move icon" title="' + Craft.t('super-table', 'Reorder') + '" role="button"></a>' +
-                '</div>' +
-                '<div class="fields">' + bodyHtml + '</div>' +
                 '</div>';
+            }
+
+            html += '<div class="fields">' + bodyHtml + '</div>' +
+            '</div>';
 
             var $tr = $(html).appendTo(this.$divInner);
 
@@ -479,6 +486,8 @@ if (typeof Craft.SuperTable === typeof undefined) {
 
             var row = new Craft.SuperTable.InputMatrix.Row(this, $tr);
             this.sorter.addItems($tr);
+
+            $tr.data('row', row);
 
             row.expand();
 
@@ -643,50 +652,66 @@ if (typeof Craft.SuperTable === typeof undefined) {
                 return;
             }
 
+            var context = this;
+
             this.$tr.addClass('collapsed');
 
             var previewHtml = '',
-                $fields = this.$fieldsContainer.children();
+                $fields = this.$fieldsContainer.children(),
+                elementThumbnails = [];
 
             for (var i = 0; i < $fields.length; i++) {
                 var $field = $($fields[i]),
                     $inputs = $field.children('.input').find('select,input[type!="hidden"],textarea,.label'),
                     inputPreviewText = '';
 
-                for (var j = 0; j < $inputs.length; j++) {
-                    var $input = $($inputs[j]),
-                        value;
+                if ($field.data('type') !== 'craft\\fields\\Assets') {
 
-                    if ($input.hasClass('label')) {
-                        var $maybeLightswitchContainer = $input.parent().parent();
+                    for (var j = 0; j < $inputs.length; j++) {
+                        var $input = $($inputs[j]),
+                            value;
 
-                        if ($maybeLightswitchContainer.hasClass('lightswitch') && (
+                        if ($input.hasClass('label')) {
+                            var $maybeLightswitchContainer = $input.parent().parent();
+
+                            if ($maybeLightswitchContainer.hasClass('lightswitch') && (
                                 ($maybeLightswitchContainer.hasClass('on') && $input.hasClass('off')) ||
                                 (!$maybeLightswitchContainer.hasClass('on') && $input.hasClass('on'))
                             )) {
-                            continue;
-                        }
-
-                        value = $input.text();
-                    }
-                    else {
-                        value = Craft.getText(Garnish.getInputPostVal($input));
-                    }
-
-                    if (value instanceof Array) {
-                        value = value.join(', ');
-                    }
-
-                    if (value) {
-                        value = Craft.trim(value);
-
-                        if (value) {
-                            if (inputPreviewText) {
-                                inputPreviewText += ', ';
+                                continue;
                             }
 
-                            inputPreviewText += value;
+                            value = $input.text();
+                        } else {
+                            value = Craft.getText(Garnish.getInputPostVal($input));
                         }
+
+                        if (value instanceof Array) {
+                            value = value.join(', ');
+                        }
+
+                        if (value) {
+                            value = Craft.trim(value);
+
+                            if (value) {
+                                if (inputPreviewText) {
+                                    inputPreviewText += ', ';
+                                }
+
+                                inputPreviewText += value;
+                            }
+                        }
+                    }
+
+                }
+
+                // Find first element thumbnail and use it in preview
+
+                if ($field.data('type') === 'craft\\fields\\Assets') {
+                    this.$tr.addClass('collapsed-with-thumbnail');
+                    var $firstElementThumb = $field.find('.elementthumb').first();
+                    if ($firstElementThumb) {
+                        elementThumbnails.push($firstElementThumb.data('srcset'));
                     }
                 }
 
@@ -696,6 +721,15 @@ if (typeof Craft.SuperTable === typeof undefined) {
             }
 
             this.$previewContainer.html(previewHtml);
+
+            if (elementThumbnails.length) {
+                $.each(elementThumbnails, function (index, srcet) {
+                    var $previewImage =  $('<img>', {
+                        srcset: srcet
+                    });
+                    context.$previewContainer.prepend($previewImage);
+                });
+            }
 
             this.$fieldsContainer.velocity('stop');
             this.$tr.velocity('stop');
@@ -729,6 +763,17 @@ if (typeof Craft.SuperTable === typeof undefined) {
             }
 
             this.collapsed = true;
+
+            // Find other rows in the same parent that might have their checkboxes checked and collapse those too
+            this.$tr.siblings().each(function(index, sibling) {
+                if ($(sibling).hasClass('matrixblock')) {
+                    var $checkbox = $(sibling).find('.matrix-checkbox input');
+                    if ($checkbox.is(':checked')) {
+                        var relatedRow = $('.superTableMatrix.matrixblock[data-id=' + $checkbox.val() + ']').data('row');
+                        relatedRow.collapse(true);
+                    }
+                }
+            });
         },
 
         expand: function() {
@@ -737,6 +782,7 @@ if (typeof Craft.SuperTable === typeof undefined) {
             }
 
             this.$tr.removeClass('collapsed');
+            this.$tr.removeClass('collapsed-with-thumbnail');
 
             this.$fieldsContainer.velocity('stop');
             this.$tr.velocity('stop');
@@ -777,6 +823,17 @@ if (typeof Craft.SuperTable === typeof undefined) {
             }
 
             this.collapsed = false;
+
+            // Find other rows in the same parent that might have their checkboxes checked and expand those too
+            this.$tr.siblings().each(function(index, sibling) {
+                if ($(sibling).hasClass('matrixblock')) {
+                    var $checkbox = $(sibling).find('.matrix-checkbox input');
+                    if ($checkbox.is(':checked')) {
+                        var relatedRow = $('.superTableMatrix.matrixblock[data-id=' + $checkbox.val() + ']').data('row');
+                        relatedRow.expand();
+                    }
+                }
+            });
         },
 
         onMenuOptionSelect: function(option) {

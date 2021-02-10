@@ -45,6 +45,7 @@ use craft\validators\ArrayValidator;
 
 use GraphQL\Type\Definition\Type;
 
+use yii\base\InvalidArgumentException;
 use yii\base\InvalidConfigException;
 use yii\base\UnknownPropertyException;
 
@@ -563,6 +564,10 @@ class SuperTableField extends Field implements EagerLoadingFieldInterface, GqlIn
             }
         } else {
             $query->id = false;
+        }
+
+        if ($this->staticField) {
+            $query->staticField(true);
         }
 
         $query

@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.6.7 - 2021-02-06
+
+### Fixed
+- Fix an issue with Gatsby Helper plugin and Super Table blocks.
+
+## 2.6.6 - 2021-01-27
+
+### Fixed
+- Fix being unable to directly access the first block in a Super Table field, which would otherwise return `null`. Please see [this issue](https://github.com/verbb/super-table/issues/399#issuecomment-768015110) in that if you're getting this error, you're likely using incorrect/unsupported template syntax. Using `entry.superTableField.myField` as a means for direct-access is reserved for static fields.
+
+## 2.6.5 - 2020-12-16
+
+### Fixed
+- Fix an `Undefined property` fatal error when saving an element containing a Super Table field, on Craft 3.5.17.
+
+## 2.6.4 - 2020-11-28
+
+### Changed
+- Sub-fields of Super Table fields now have “Use this field’s values as search keywords” unchecked for new fields. This is inline with Craft's native Matrix behaviour.
+
+### Fixed
+- Fix block type model `getHandle()` returning values included a hyphen, causing issues with GraphQL.
+- Fix typehint for `getRelatedElementsQuery()`.
+
+## 2.6.3 - 2020-09-28
+
+### Fixed
+- Fix InvalidArgumentException not found error. (thanks @smcyr).
+- Fix static matrix layout visual issue.
+
 ## 2.6.2 - 2020-08-21
 
 ### Fixed

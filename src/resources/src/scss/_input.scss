@@ -330,7 +330,7 @@
 // ==========================================================================
 
 body.ltr .superTableMatrix > .titlebar {
-    padding: 5px 70px 5px 5px;
+    padding: 5px 70px 5px 25px;
 }
 
 .superTableMatrix .fields .heading-text {
@@ -339,6 +339,34 @@ body.ltr .superTableMatrix > .titlebar {
 
 .superTableContainer.matrixLayout.static-field > .matrixLayoutContainer > .matrixblock {
     padding-top: 14px;
+}
+
+.superTableMatrix .matrix-checkbox {
+    position: absolute;
+    top: 7px;
+}
+
+.superTableMatrix.matrixblock.collapsed-with-thumbnail {
+    height: auto !important;
+    padding-bottom: 0;
+
+    .matrix-checkbox {
+        top: 13px;
+    }
+
+    .actions {
+        top: 11px;
+    }
+
+    .titlebar {
+        .preview {
+            img {
+                height: 35px;
+                vertical-align: middle;
+                margin: 0 5px;
+            }
+        }
+    }
 }
 
 // ==========================================================================
@@ -380,4 +408,3 @@ body.ltr .superTableMatrix > .titlebar {
 .superTableContainer .field[data-type="craft\\fields\\Checkboxes"] fieldset {
     margin: 0;
 }
-

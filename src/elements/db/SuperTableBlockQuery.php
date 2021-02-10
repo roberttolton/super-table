@@ -75,6 +75,8 @@ class SuperTableBlockQuery extends ElementQuery
      */
     public $typeId;
 
+    public $staticField;
+
 
     // Public Methods
     // =========================================================================
@@ -306,6 +308,41 @@ class SuperTableBlockQuery extends ElementQuery
         return $this;
     }
 
+    public function staticField($value)
+    {
+        $this->staticField = $value;
+        return $this;
+    }
+
+    public function criteriaAttributes(): array
+    {
+        // Would be nice to use this, but due to how people call Super Table blocks directly, it's not possible.
+        // if (!$this->staticField) {
+        //     return parent::criteriaAttributes();
+        // }
+
+        $class = new \ReflectionClass($this);
+        $names = [];
+
+        // Restore legancy-handling for people using `entry.stfield.field` via direct access. They shouldn't be, as it's
+        // considered invalid unless it's a static field, but we better keep this alive for the time-being to keep the peace.
+        // This was a direct issue with changes to `criteriaAttributes()` in Craft 3.5.17 which causes ST fields to error
+        // when being saved, due to incorrect custom fields.
+        foreach ($class->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+            if (!$property->isStatic()) {
+                $dec = $property->getDeclaringClass();
+                if (
+                    ($dec->getName() === self::class || $dec->isSubclassOf(self::class)) &&
+                    !in_array($property->getName(), ['elementType', 'query', 'subQuery', 'contentTable', 'customFields', 'asArray'], true)
+                ) {
+                    $names[] = $property->getName();
+                }
+            }
+        }
+
+        return $names;
+    }
+
     // Protected Methods
     // =========================================================================
 
@@ -431,6 +468,7 @@ class SuperTableBlockQuery extends ElementQuery
         // This method won't get called if $this->fieldId isn't set to a single int
         /** @var SuperTableField $supertableField */
         $supertableField = Craft::$app->getFields()->getFieldById(reset($this->fieldId));
+
         return $supertableField->getBlockTypeFields();
     }
 
